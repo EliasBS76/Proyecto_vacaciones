@@ -1,0 +1,28 @@
+CREATE DATABASE REPORTE_LIBROS
+USE REPORTE_LIBROS
+
+CREATE TABLE autor (
+  id BIGINT PRIMARY KEY IDENTITY(1,1),
+  nombre NVARCHAR(45) NOT NULL,
+  nacionalidad NVARCHAR(45)
+);
+
+CREATE TABLE libro (
+  id BIGINT PRIMARY KEY IDENTITY(1,1),
+  titulo NVARCHAR(55) NOT NULL,
+  genero NVARCHAR(40)NOT NULL,
+  precio int NOT NULL ,
+  autor_id BIGINT FOREIGN KEY REFERENCES autor(id),
+  
+);
+
+CREATE TABLE ventas (
+  id BIGINT PRIMARY KEY IDENTITY(1,1),
+  libro_id BIGINT FOREIGN KEY REFERENCES libro(id),
+  continente NVARCHAR(40) NOT NULL,
+  venta_mensual  NVARCHAR(MAX) NOT NULL,
+  ventas_totales INT NOT NULL
+);
+
+SELECT id,nombre  FROM autor
+SELECT * FROM libro
