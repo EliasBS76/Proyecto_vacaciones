@@ -111,19 +111,88 @@ def fill_book_info():
 
 #|-------------------------------------------FUNCION PARA LLENAR VENTAS---------------------------------------------------|
 def fill_sales_info(book_id):
-    continente = input("Ingrese el continente donde se realizó la venta: ")
-    mes = input("Ingrese el mes de la venta: ")
-    venta_mensual = int(input("Ingrese el número de ventas mensuales: "))
-    ventas_totales = int(input("Ingrese el número de ventas totales: "))
+    continentes_validos = ["AMERICA", "EUROPA", "AFRICA", "ASIA", "OCEANIA"]
+    meses_validos = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"]
+    
+    ventas_por_continente = {continente: 0 for continente in continentes_validos}
+    
+    for continente in continentes_validos:
+        print(f"\nRegistrando ventas para el continente: {continente}")
+        
+        for mes in meses_validos:
+            while True:
+                try:
+                    venta_mensual = int(input(f"Ingrese el número de ventas mensuales para {continente} en {mes}: "))
+                    break
+                except ValueError:
+                    print("Entrada no válida. Por favor, ingresa un número entero.")
+            
+            ventas_por_continente[continente] += venta_mensual
 
-    query = """
-        INSERT INTO ventas (libro_id, continente, mes, venta_mensual, ventas_totales) 
-        VALUES (?, ?, ?, ?, ?)
-    """
-    params = (book_id, continente, mes, venta_mensual, ventas_totales)
+            query = """
+                INSERT INTO ventas (libro_id, continente, mes, venta_mensual, ventas_totales) 
+                VALUES (?, ?, ?, ?, ?)
+            """
+            total_anual = ventas_por_continente[continente]
+            params = (book_id, continente, mes, venta_mensual, total_anual)
+            connect_and_execute_query(query, params)
+            print(f"Venta en {continente} para el mes de {mes} añadida exitosamente.")
+    
+    # Guardar resúmenes en la base de datos
+    conn = connect()
+    cursor = conn.cursor()
+    
+    try:
+        query = "SELECT precio FROM libro WHERE id = ?"
+        cursor.execute(query, (book_id,))
+        precio_libro = cursor.fetchone()[0]
 
-    connect_and_execute_query(query, params)
-    print("Venta añadida exitosamente.")
+        for continente, total_ventas in ventas_por_continente.items():
+            dinero_generado_continente = total_ventas * precio_libro
+
+            # Usar MERGE para insertar o actualizar el resumen de ventas por continente
+            query = """
+                MERGE resumen_ventas AS target
+                USING (VALUES (?, ?, ?, ?)) AS source (libro_id, continente, ventas_anuales, dinero_generado)
+                ON (target.libro_id = source.libro_id AND target.continente = source.continente)
+                WHEN MATCHED THEN
+                    UPDATE SET ventas_anuales = source.ventas_anuales, dinero_generado = source.dinero_generado
+                WHEN NOT MATCHED THEN
+                    INSERT (libro_id, continente, ventas_anuales, dinero_generado)
+                    VALUES (source.libro_id, source.continente, source.ventas_anuales, source.dinero_generado);
+            """
+            params = (book_id, continente, total_ventas, dinero_generado_continente)
+            cursor.execute(query, params)
+            
+        total_anual_libro = sum(ventas_por_continente.values())
+        dinero_generado_anual_libro = total_anual_libro * precio_libro
+        
+        # Usar MERGE para insertar o actualizar el resumen total del libro
+        query = """
+            MERGE resumen_ventas AS target
+            USING (VALUES (?, 'TOTAL', ?, ?)) AS source (libro_id, continente, ventas_anuales, dinero_generado)
+            ON (target.libro_id = source.libro_id AND target.continente = source.continente)
+            WHEN MATCHED THEN
+                UPDATE SET ventas_anuales = source.ventas_anuales, dinero_generado = source.dinero_generado
+            WHEN NOT MATCHED THEN
+                INSERT (libro_id, continente, ventas_anuales, dinero_generado)
+                VALUES (source.libro_id, source.continente, source.ventas_anuales, source.dinero_generado);
+        """
+        params = (book_id, total_anual_libro, dinero_generado_anual_libro)
+        cursor.execute(query, params)
+        
+        conn.commit()
+        
+        print(f"\nVentas anuales y dinero generado para cada continente se guardaron exitosamente.")
+        print(f"Ventas anuales del libro: {total_anual_libro}")
+        print(f"Dinero generado anual del libro: {dinero_generado_anual_libro}")
+
+    except Exception as e:
+        print(f"Error al guardar el resumen de ventas: {e}")
+        conn.rollback()
+    finally:
+        cursor.close()
+        conn.close()
 
 #|-------------------------------------------CODIGO INCIAL ----------------------------------------------------|
 
@@ -140,6 +209,7 @@ while True:
         elif opc == 2:
             print("Estas ingresando un nuevo libro")
             id_libro=fill_book_info()
+            fill_sales_info(id_libro)
 
             
         else:
