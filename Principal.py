@@ -103,97 +103,88 @@ def fill_book_info():
         print(f"EL ID DEL LIBRO INSERTADO: {id_libro}")
         return id_libro
     except Exception as e:
-        precio(f"ERROR AL OBTENER EL ID DEL LIBRO {e}")
+        print(f"ERROR AL OBTENER EL ID DEL LIBRO {e}")
     finally : 
-        cursor.close
-        conn.close  
+        cursor.close()
+        conn.close()
     print("Libro añadido exitosamente.")
 
 #|-------------------------------------------FUNCION PARA LLENAR VENTAS---------------------------------------------------|
-def fill_sales_info(book_id):
-    continentes_validos = ["AMERICA", "EUROPA", "AFRICA", "ASIA", "OCEANIA"]
-    meses_validos = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"]
-    
-    ventas_por_continente = {continente: 0 for continente in continentes_validos}
-    
-    for continente in continentes_validos:
-        print(f"\nRegistrando ventas para el continente: {continente}")
-        
-        for mes in meses_validos:
-            while True:
-                try:
-                    venta_mensual = int(input(f"Ingrese el número de ventas mensuales para {continente} en {mes}: "))
-                    break
-                except ValueError:
-                    print("Entrada no válida. Por favor, ingresa un número entero.")
-            
-            ventas_por_continente[continente] += venta_mensual
 
-            query = """
-                INSERT INTO ventas (libro_id, continente, mes, venta_mensual, ventas_totales) 
-                VALUES (?, ?, ?, ?, ?)
-            """
-            total_anual = ventas_por_continente[continente]
-            params = (book_id, continente, mes, venta_mensual, total_anual)
-            connect_and_execute_query(query, params)
-            print(f"Venta en {continente} para el mes de {mes} añadida exitosamente.")
-    
-    # Guardar resúmenes en la base de datos
+
+def ventas(id_libro) : 
+    continentes=["AMERICA","AFRICA","ASIA","EUROPA","OCEANIA"]
+    while True:
+        print("CONTINENTES A LLENAR: ", ", ".join(continentes))
+        continente  = input("Escribe el nombre del continente que deseas insertar ")
+        continente= continente.upper()
+        if continente =="AMERICA":
+            llenado_meses(id_libro,continente)
+
+            continentes.remove("AMERICA")
+
+        elif continente =="AFRICA":
+            llenado_meses(id_libro,continente)
+
+            continentes.remove("AFRICA")
+
+        elif continente =="ASIA":
+            llenado_meses(id_libro,continente)
+
+            continentes.remove("ASIA")
+
+        elif continente =="EUROPA":
+            llenado_meses(id_libro,continente)
+
+            continentes.remove("EUROPA")
+
+        elif continente =="OCEANIA":
+            llenado_meses(id_libro,continente)
+
+            continentes.remove("OCEANIA")
+        else:
+            print("OPCION NO VALIDA , FAVOR DE INGRESAR EL NOMBRE DEL CONTINENTE TAL COMO SE LE MUESTRA")
+        if not continentes:
+            print("TODOS LOS CONTINENTES FUERON LLENADOS :)")
+            break
+
+            
+
+def llenado_meses(id_libro,continente):
+    enero=int(input("Ingresa las ventas del mes de enero "))
+    febrero=int(input("Ingresa las ventas del mes de febreo "))
+    marzo=int(input("Ingresa las ventas del mes de marzo "))
+    Abril=int(input("Ingresa las ventas del mes de Abril "))
+    Mayo=int(input("Ingresa las ventas del mes de Mayo "))
+    Junio=int(input("Ingresa las ventas del mes de junio "))
+    Julio=int(input("Ingresa las ventas del mes de julio "))
+    Agosto=int(input("Ingresa las ventas del mes de Agosto "))
+    septiembre=int(input("Ingresa las ventas del mes de Septiembre "))
+    octubre=int(input("Ingresa las ventas del mes de Octubre "))
+    noviembre=int(input("Ingresa las ventas del mes de Noviembre "))
+    diciembre=int(input("Ingresa las ventas del mes de Diciembre "))
+    venta_anual = (enero+febrero+marzo+Abril+Mayo+Junio+Julio+Agosto+septiembre+octubre+noviembre+diciembre)
+    query = """
+    INSERT INTO venta (libro_id,continente,enero,febrero,marzo,abril,mayo,junio,julio,agosto,septiembre,octubre,noviembre,diciembre,venta_anual)
+    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
+
+    """
     conn = connect()
     cursor = conn.cursor()
-    
     try:
-        query = "SELECT precio FROM libro WHERE id = ?"
-        cursor.execute(query, (book_id,))
-        precio_libro = cursor.fetchone()[0]
-
-        for continente, total_ventas in ventas_por_continente.items():
-            dinero_generado_continente = total_ventas * precio_libro
-
-            # Usar MERGE para insertar o actualizar el resumen de ventas por continente
-            query = """
-                MERGE resumen_ventas AS target
-                USING (VALUES (?, ?, ?, ?)) AS source (libro_id, continente, ventas_anuales, dinero_generado)
-                ON (target.libro_id = source.libro_id AND target.continente = source.continente)
-                WHEN MATCHED THEN
-                    UPDATE SET ventas_anuales = source.ventas_anuales, dinero_generado = source.dinero_generado
-                WHEN NOT MATCHED THEN
-                    INSERT (libro_id, continente, ventas_anuales, dinero_generado)
-                    VALUES (source.libro_id, source.continente, source.ventas_anuales, source.dinero_generado);
-            """
-            params = (book_id, continente, total_ventas, dinero_generado_continente)
-            cursor.execute(query, params)
-            
-        total_anual_libro = sum(ventas_por_continente.values())
-        dinero_generado_anual_libro = total_anual_libro * precio_libro
-        
-        # Usar MERGE para insertar o actualizar el resumen total del libro
-        query = """
-            MERGE resumen_ventas AS target
-            USING (VALUES (?, 'TOTAL', ?, ?)) AS source (libro_id, continente, ventas_anuales, dinero_generado)
-            ON (target.libro_id = source.libro_id AND target.continente = source.continente)
-            WHEN MATCHED THEN
-                UPDATE SET ventas_anuales = source.ventas_anuales, dinero_generado = source.dinero_generado
-            WHEN NOT MATCHED THEN
-                INSERT (libro_id, continente, ventas_anuales, dinero_generado)
-                VALUES (source.libro_id, source.continente, source.ventas_anuales, source.dinero_generado);
-        """
-        params = (book_id, total_anual_libro, dinero_generado_anual_libro)
-        cursor.execute(query, params)
-        
+        cursor.execute(query,(id_libro,continente,enero,febrero,marzo,Abril,Mayo,Junio,Julio,Agosto,septiembre,octubre,noviembre,diciembre,venta_anual))
         conn.commit()
-        
-        print(f"\nVentas anuales y dinero generado para cada continente se guardaron exitosamente.")
-        print(f"Ventas anuales del libro: {total_anual_libro}")
-        print(f"Dinero generado anual del libro: {dinero_generado_anual_libro}")
-
-    except Exception as e:
-        print(f"Error al guardar el resumen de ventas: {e}")
-        conn.rollback()
+    except Exception as e : 
+        print(f"ERROR AL EJECUTAR LA CONSULTA : {e}")
     finally:
         cursor.close()
         conn.close()
 
+
+
+
+
+    
 #|-------------------------------------------CODIGO INCIAL ----------------------------------------------------|
 
 
@@ -209,8 +200,7 @@ while True:
         elif opc == 2:
             print("Estas ingresando un nuevo libro")
             id_libro=fill_book_info()
-            fill_sales_info(id_libro)
-
+            ventas(id_libro)
             
         else:
             print("Opción no válida, por favor intente de nuevo.")

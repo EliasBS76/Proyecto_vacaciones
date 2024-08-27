@@ -2,7 +2,7 @@ import pyodbc
 
 def connect():
     try:
-        conn = pyodbc.connect("DRIVER={SQL Server};SERVER=ELIASBS;DATABASE=REPORTES;Trusted_Connection=yes;")
+        conn = pyodbc.connect("DRIVER={SQL Server};SERVER=ELIASBS;DATABASE=REPORTE_LIBROS;Trusted_Connection=yes;")
          # Mensaje para depuración
         return conn
     except Exception as e:

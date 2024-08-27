@@ -1,6 +1,6 @@
 CREATE DATABASE REPORTE_LIBROS
 USE REPORTE_LIBROS
-
+USE REPORTES
 CREATE TABLE autor (
   id BIGINT PRIMARY KEY IDENTITY(1,1),
   nombre NVARCHAR(45) NOT NULL,
@@ -16,13 +16,28 @@ CREATE TABLE libro (
   
 );
 
-CREATE TABLE ventas (
+CREATE TABLE venta (
   id BIGINT PRIMARY KEY IDENTITY(1,1),
   libro_id BIGINT FOREIGN KEY REFERENCES libro(id),
-  continente NVARCHAR(40) NOT NULL,
-  venta_mensual  NVARCHAR(MAX) NOT NULL,
-  ventas_totales INT NOT NULL
-);
+  continente varchar(25),
+  enero INT DEFAULT 0,
+  febrero INT DEFAULT 0,
+  marzo INT DEFAULT 0,
+  abril INT DEFAULT 0,
+  mayo INT DEFAULT 0,
+  junio INT DEFAULT 0,
+  julio INT DEFAULT 0,
+  agosto INT DEFAULT 0,
+  septiembre INT DEFAULT 0,
+  octubre INT DEFAULT 0,
+  noviembre INT DEFAULT 0,
+  diciembre INT DEFAULT 0,
+  venta_anual INT DEFAULT 0
+  )
+
 
 SELECT id,nombre  FROM autor
 SELECT * FROM libro
+SELECT * FROM venta
+DROP DATABASE REPORTE_LIBROS
+
